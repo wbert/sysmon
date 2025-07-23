@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { bytesFmt, bpsFmt } from "@/lib/format";
 import { ThemeToggle } from "@/components/theme-toggle";
+import DashboardSkeleton from "./dashboard-skeleton";
 
 type DiskInfo = { total: number; used: number; free: number; percent: number };
 type Proc = { pid: number; name: string; username: string; cpu_percent: number; memory_percent: number };
@@ -60,7 +61,7 @@ export default function Dashboard() {
     return () => ws.close();
   }, []);
 
-  if (!stats) return <p className="p-6">Loading…</p>;
+  if (!stats) return <DashboardSkeleton />;
 
   const hasTemps = Object.keys(stats.temps).length > 0;
   const hasFans = Object.keys(stats.fans).length > 0;
