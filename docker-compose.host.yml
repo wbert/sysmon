@@ -1,0 +1,9 @@
+services:
+  backend:
+    pid: host
+    privileged: true
+    volumes:
+      - /sys:/sys:ro
+    environment:
+      - MONITOR_MODE=host
+

@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./be
+    container_name: sysmon-backend
+    restart: unless-stopped
+    networks: [appnet]
+    expose: ["8000"]
+    environment:
+      - MONITOR_MODE=auto
+
+  nginx:
+    build: ./fe
+    container_name: sysmon-nginx
+    restart: unless-stopped
+    # depends_on:
+    #   backend:
+    #     condition: service_started
+    networks: [appnet]
+    ports: ["8001:8001"]
+
+networks:
+  appnet:
+
