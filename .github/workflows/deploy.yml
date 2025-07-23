@@ -1,0 +1,53 @@
+name: Sysmon CI/CD Pipeline 
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Install cloudflared
+      run: |
+        curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+        chmod +x cloudflared
+        sudo mv cloudflared /usr/local/bin/cloudflared
+
+    - name: Add SSH key to agent
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Deploy via SSH over tunnel
+      run: |
+        ssh -T \
+          -o StrictHostKeyChecking=no \
+          -o UserKnownHostsFile=/dev/null \
+          -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+          -o ProxyCommand="cloudflared access ssh --hostname ${{ secrets.TUNNEL_HOST }}" \
+          ${{ secrets.TUNNEL_USER }}@${{ secrets.TUNNEL_HOST }} <<EOF
+            set -euo pipefail
+
+            APP_PATH='${{ secrets.APP_PATH }}'
+
+            echo "🔐 SSH OK"
+            cd "\$APP_PATH"
+
+            echo "📦 Updating code..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "🐳 Rebuilding with Docker Compose..."
+            docker compose down || true
+            docker compose down -f docker-compose.yml -f docker-compose.host.yml -d --build
+            
+            echo "✅ Done"
+            exit
+        EOF
