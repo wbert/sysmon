@@ -11,6 +11,7 @@ import {
   Activity, HardDrive, Network, BatteryCharging, Thermometer, Fan, Cpu, MemoryStick,
 } from "lucide-react";
 import { bytesFmt, bpsFmt } from "@/lib/format";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type DiskInfo = { total: number; used: number; free: number; percent: number };
 type Proc = { pid: number; name: string; username: string; cpu_percent: number; memory_percent: number };
@@ -73,7 +74,10 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-semibold">System Monitor</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">System Monitor</h1>
+        <ThemeToggle />
+      </div>
       <p className="text-sm text-muted-foreground">
         {stats.source} • {stats.machine} • {new Date(stats.now_iso).toLocaleString()}
       </p>
