@@ -1,32 +1,54 @@
 import asyncio
-from fastapi import Depends, FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from .deps import Settings, get_settings, get_snapshot
+from app.deps import get_settings, get_snapshot, Settings
 
 app = FastAPI()
+settings: Settings = get_settings()
 
-# Set CORS using a cached settings
-_settings: Settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_settings.ALLOW_ORIGINS,
+    allow_origins=settings.ALLOW_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+clients: set[WebSocket] = set()
+
+
+async def broadcaster():
+    while True:
+        snap = get_snapshot()  # one snapshot for everyone
+        dead = []
+        for ws in clients:
+            try:
+                await ws.send_json(snap)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            clients.discard(ws)
+        await asyncio.sleep(settings.WS_INTERVAL)
+
+
+@app.on_event("startup")
+async def start_bg_task():
+    asyncio.create_task(broadcaster())
+
 
 @app.get("/api/stats")
-def stats(snapshot=Depends(get_snapshot)):
-    return snapshot
+def stats():
+    return get_snapshot()
 
 
 @app.websocket("/ws/stats")
-async def ws_stats(ws: WebSocket, settings: Settings = Depends(get_settings)):
+async def ws_stats(ws: WebSocket):
     await ws.accept()
+    clients.add(ws)
     try:
+        # keep the connection alive; broadcaster sends data
         while True:
-            await ws.send_json(get_snapshot())
-            await asyncio.sleep(settings.WS_INTERVAL)
+            await asyncio.sleep(3600)
     finally:
+        clients.discard(ws)
         await ws.close()
 
