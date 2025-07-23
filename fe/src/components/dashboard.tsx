@@ -145,25 +145,25 @@ export default function Dashboard() {
       {(hasTemps || hasFans) && (
         <>
           <Separator />
-          <div className={`grid gap-4 ${hasTemps && hasFans ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
+          <div className={`grid gap-4 ${hasTemps && hasFans ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
             {hasTemps && (
-              <Card className={!hasFans ? 'md:col-span-2' : ''}>
+              <Card className={!hasFans ? "md:col-span-2" : ""}>
                 <CardHeader className="flex items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Thermometer className="h-4 w-4" /> Temperatures
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm">
+                <CardContent className="space-y-4 text-sm">
                   {Object.entries(stats.temps).map(([chip, arr]) => (
                     <div key={chip}>
-                      <p className="font-medium mb-1">{chip}</p>
+                      <p className="font-medium mb-1 text-muted-foreground">{chip}</p>
                       {arr.map((t, i) => (
                         <div
                           key={i}
-                          className="grid grid-cols-[minmax(6rem,auto)_4rem_auto] items-center gap-2 py-1"
+                          className="grid grid-cols-[minmax(7rem,auto)_4.5rem_auto] items-center gap-2 py-1"
                         >
                           <span className="truncate">{niceLabel(t.label, i)}</span>
-                          <span className="text-right">{t.current.toFixed(1)}°C</span>
+                          <span className="text-right tabular-nums">{t.current.toFixed(1)}°C</span>
                           <div className="flex items-center gap-2">
                             {t.high && (
                               <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -181,23 +181,23 @@ export default function Dashboard() {
             )}
 
             {hasFans && (
-              <Card className={!hasTemps ? 'md:col-span-2' : ''}>
+              <Card className={!hasTemps ? "md:col-span-2" : ""}>
                 <CardHeader className="flex items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Fan className="h-4 w-4" /> Fans
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm">
+                <CardContent className="space-y-4 text-sm">
                   {Object.entries(stats.fans).map(([chip, arr]) => (
                     <div key={chip}>
-                      <p className="font-medium mb-1">{chip}</p>
+                      <p className="font-medium mb-1 text-muted-foreground">{chip}</p>
                       {arr.map((f, i) => (
                         <div
                           key={i}
-                          className="grid grid-cols-[minmax(6rem,auto)_auto] items-center gap-2 py-1"
+                          className="grid grid-cols-[minmax(7rem,auto)_auto] items-center gap-2 py-1"
                         >
                           <span className="truncate">{niceLabel(f.label, i)}</span>
-                          <span>{f.current} RPM</span>
+                          <span className="tabular-nums">{f.current} RPM</span>
                         </div>
                       ))}
                     </div>
@@ -208,6 +208,7 @@ export default function Dashboard() {
           </div>
         </>
       )}
+
       <Separator />
 
       {/* Battery & Network */}
