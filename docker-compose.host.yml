@@ -4,6 +4,7 @@ services:
     privileged: true
     volumes:
       - /sys:/sys:ro
+      - /:/host:ro
     environment:
       - MONITOR_MODE=host
 

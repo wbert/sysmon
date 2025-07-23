@@ -14,9 +14,9 @@ services:
     build: ./fe
     container_name: sysmon-nginx
     restart: unless-stopped
-    # depends_on:
-    #   backend:
-    #     condition: service_started
+    depends_on:
+      backend:
+        condition: service_started
     networks: [appnet]
     ports: ["8001:8001"]
 
