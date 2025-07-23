@@ -42,6 +42,7 @@ const niceLabel = (lbl: string | null, idx: number) => lbl && lbl.trim() ? lbl :
 
 const HIDE_DISKS = ["/etc/hosts", "/etc/hostname", "/etc/resolv.conf"];
 
+
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const history = useRef<{ t: number; cpu: number; ram: number }[]>([]);
@@ -59,6 +60,9 @@ export default function Dashboard() {
   }, []);
 
   if (!stats) return <p className="p-6">Loading…</p>;
+
+  const hasTemps = Object.keys(stats.temps).length > 0;
+  const hasFans = Object.keys(stats.fans).length > 0;
 
   const memUsedGB = bytesToGB(stats.mem.used).toFixed(2);
   const memTotalGB = bytesToGB(stats.mem.total).toFixed(2);
@@ -138,13 +142,12 @@ export default function Dashboard() {
       </div>
 
       {/* Temps & Fans */}
-      {(Object.keys(stats.temps).length > 0 || Object.keys(stats.fans).length > 0) && (
+      {(hasTemps || hasFans) && (
         <>
           <Separator />
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Temps */}
-            {Object.keys(stats.temps).length > 0 && (
-              <Card>
+          <div className={`grid gap-4 ${hasTemps && hasFans ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
+            {hasTemps && (
+              <Card className={!hasFans ? 'md:col-span-2' : ''}>
                 <CardHeader className="flex items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Thermometer className="h-4 w-4" /> Temperatures
@@ -155,12 +158,20 @@ export default function Dashboard() {
                     <div key={chip}>
                       <p className="font-medium mb-1">{chip}</p>
                       {arr.map((t, i) => (
-                        <div key={i} className="flex items-center gap-3 py-1">
-                          <span className="w-28 truncate">{niceLabel(t.label, i)}</span>
-                          <span className="w-14">{t.current.toFixed(1)}°C</span>
-                          {t.high ? <span className="text-xs text-muted-foreground">/ {t.high.toFixed(1)}°C</span> : null}
-                          <Progress className="flex-1 h-2"
-                            value={tempPct(t.current, t.high)} />
+                        <div
+                          key={i}
+                          className="grid grid-cols-[minmax(6rem,auto)_4rem_auto] items-center gap-2 py-1"
+                        >
+                          <span className="truncate">{niceLabel(t.label, i)}</span>
+                          <span className="text-right">{t.current.toFixed(1)}°C</span>
+                          <div className="flex items-center gap-2">
+                            {t.high && (
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                / {t.high.toFixed(1)}°C
+                              </span>
+                            )}
+                            <Progress className="h-2 flex-1" value={tempPct(t.current, t.high)} />
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -169,9 +180,8 @@ export default function Dashboard() {
               </Card>
             )}
 
-            {/* Fans */}
-            {Object.keys(stats.fans).length > 0 && (
-              <Card>
+            {hasFans && (
+              <Card className={!hasTemps ? 'md:col-span-2' : ''}>
                 <CardHeader className="flex items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Fan className="h-4 w-4" /> Fans
@@ -182,8 +192,11 @@ export default function Dashboard() {
                     <div key={chip}>
                       <p className="font-medium mb-1">{chip}</p>
                       {arr.map((f, i) => (
-                        <div key={i} className="flex items-center gap-3 py-1">
-                          <span className="w-28 truncate">{niceLabel(f.label, i)}</span>
+                        <div
+                          key={i}
+                          className="grid grid-cols-[minmax(6rem,auto)_auto] items-center gap-2 py-1"
+                        >
+                          <span className="truncate">{niceLabel(f.label, i)}</span>
                           <span>{f.current} RPM</span>
                         </div>
                       ))}
@@ -195,7 +208,6 @@ export default function Dashboard() {
           </div>
         </>
       )}
-
       <Separator />
 
       {/* Battery & Network */}
