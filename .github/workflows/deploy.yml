@@ -25,6 +25,7 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+    
     - name: Deploy via SSH over tunnel
       run: |
         ssh -T \
@@ -32,22 +33,22 @@ jobs:
           -o UserKnownHostsFile=/dev/null \
           -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
           -o ProxyCommand="cloudflared access ssh --hostname ${{ secrets.TUNNEL_HOST }}" \
-          ${{ secrets.TUNNEL_USER }}@${{ secrets.TUNNEL_HOST }} <<EOF
+          ${{ secrets.TUNNEL_USER }}@${{ secrets.TUNNEL_HOST }} <<'EOF'
             set -euo pipefail
 
             APP_PATH='${{ secrets.APP_PATH }}'
 
             echo "🔐 SSH OK"
-            cd "\$APP_PATH"
+            cd "$APP_PATH"
 
             echo "📦 Updating code..."
             git fetch origin main
             git reset --hard origin/main
 
             echo "🐳 Rebuilding with Docker Compose..."
-            docker compose down || true
-            docker compose down -f docker-compose.yml -f docker-compose.host.yml -d --build
-            
+            docker compose -f docker-compose.yml -f docker-compose.host.yml down || true
+            docker compose -f docker-compose.yml -f docker-compose.host.yml up -d --build --remove-orphans
+
             echo "✅ Done"
-            exit
         EOF
+
