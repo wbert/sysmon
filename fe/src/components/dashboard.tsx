@@ -7,31 +7,40 @@ import { Separator } from "@/components/ui/separator";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Activity, HardDrive, Network, BatteryCharging } from "lucide-react";
-import { bytesFmt, bpsFmt } from "../lib/format";
+import {
+  Activity, HardDrive, Network, BatteryCharging, Thermometer, Fan, Cpu, MemoryStick,
+} from "lucide-react";
+import { bytesFmt, bpsFmt } from "@/lib/format";
 
 type DiskInfo = { total: number; used: number; free: number; percent: number };
 type Proc = { pid: number; name: string; username: string; cpu_percent: number; memory_percent: number };
 
 type Stats = {
+  source: string;
+  machine: string;
+  now_iso: string;
   cpu_percent: number;
   cpu_cores: number;
   load_avg: [number, number, number] | null;
   mem: { total: number; used: number; percent: number };
   swap: { total: number; used: number; percent: number };
-  temps: Record<string, any[]>;
-  fans: Record<string, any[]>;
+  temps: Record<string, Array<{ label: string | null; current: number; high?: number | null; critical?: number | null }>>;
+  fans: Record<string, Array<{ label: string | null; current: number }>>;
   battery: { percent: number; secsleft: number; power_plugged: boolean } | null;
   disk: Record<string, DiskInfo>;
   net_io: { bytes_sent: number; bytes_recv: number; packets_sent: number; packets_recv: number };
   net_rate: { up_bps: number; down_bps: number };
   boot_time: number;
   top_procs: Proc[];
-  machine: string;
-  now_iso: string;
-  source: string;
 };
 
+const bytesToGB = (n: number) => n / 1e9;
+const tempPct = (cur: number, high?: number | null) =>
+  high && high > 0 ? (cur / high) * 100 : Math.min(cur, 100); // fallback
+
+const niceLabel = (lbl: string | null, idx: number) => lbl && lbl.trim() ? lbl : `sensor_${idx}`;
+
+const HIDE_DISKS = ["/etc/hosts", "/etc/hostname", "/etc/resolv.conf"];
 
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -40,7 +49,7 @@ export default function Dashboard() {
   useEffect(() => {
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
     const ws = new WebSocket(`${proto}://${window.location.host}/ws/stats`);
-    ws.onmessage = e => {
+    ws.onmessage = (e) => {
       const data: Stats = JSON.parse(e.data);
       setStats(data);
       history.current.push({ t: Date.now(), cpu: data.cpu_percent, ram: data.mem.percent });
@@ -51,10 +60,12 @@ export default function Dashboard() {
 
   if (!stats) return <p className="p-6">Loading…</p>;
 
-  const memUsedGB = stats.mem.used / 1e9;
-  const memTotalGB = stats.mem.total / 1e9;
-  const swapUsedGB = stats.swap.used / 1e9;
-  const swapTotalGB = stats.swap.total / 1e9;
+  const memUsedGB = bytesToGB(stats.mem.used).toFixed(2);
+  const memTotalGB = bytesToGB(stats.mem.total).toFixed(2);
+  const swapUsedGB = bytesToGB(stats.swap.used).toFixed(2);
+  const swapTotalGB = bytesToGB(stats.swap.total).toFixed(2);
+
+  const disks = Object.entries(stats.disk).filter(([m]) => !HIDE_DISKS.includes(m));
 
   return (
     <div className="p-6 space-y-6">
@@ -62,12 +73,14 @@ export default function Dashboard() {
       <p className="text-sm text-muted-foreground">
         {stats.source} • {stats.machine} • {new Date(stats.now_iso).toLocaleString()}
       </p>
+
       {/* Top stat cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">CPU Usage</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
+              <Cpu className="h-4 w-4" /> CPU
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.cpu_percent.toFixed(1)}%</div>
@@ -78,13 +91,14 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="flex items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Memory</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
+              <MemoryStick className="h-4 w-4" /> Memory
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.mem.percent.toFixed(1)}%</div>
             <p className="text-xs text-muted-foreground">
-              {memUsedGB.toFixed(2)} / {memTotalGB.toFixed(2)} GB
+              {memUsedGB} / {memTotalGB} GB
             </p>
             <Progress value={stats.mem.percent} className="mt-3" />
           </CardContent>
@@ -92,13 +106,14 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="flex items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Swap</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
+              <Activity className="h-4 w-4" /> Swap
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.swap.percent.toFixed(1)}%</div>
             <p className="text-xs text-muted-foreground">
-              {swapUsedGB.toFixed(2)} / {swapTotalGB.toFixed(2)} GB
+              {swapUsedGB} / {swapTotalGB} GB
             </p>
             <Progress value={stats.swap.percent} className="mt-3" />
           </CardContent>
@@ -107,7 +122,6 @@ export default function Dashboard() {
         <Card>
           <CardHeader className="flex items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Load Avg (1/5/15m)</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             {stats.load_avg ? (
@@ -123,6 +137,67 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Temps & Fans */}
+      {(Object.keys(stats.temps).length > 0 || Object.keys(stats.fans).length > 0) && (
+        <>
+          <Separator />
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Temps */}
+            {Object.keys(stats.temps).length > 0 && (
+              <Card>
+                <CardHeader className="flex items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Thermometer className="h-4 w-4" /> Temperatures
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  {Object.entries(stats.temps).map(([chip, arr]) => (
+                    <div key={chip}>
+                      <p className="font-medium mb-1">{chip}</p>
+                      {arr.map((t, i) => (
+                        <div key={i} className="flex items-center gap-3 py-1">
+                          <span className="w-28 truncate">{niceLabel(t.label, i)}</span>
+                          <span className="w-14">{t.current.toFixed(1)}°C</span>
+                          {t.high ? <span className="text-xs text-muted-foreground">/ {t.high.toFixed(1)}°C</span> : null}
+                          <Progress className="flex-1 h-2"
+                            value={tempPct(t.current, t.high)} />
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Fans */}
+            {Object.keys(stats.fans).length > 0 && (
+              <Card>
+                <CardHeader className="flex items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Fan className="h-4 w-4" /> Fans
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  {Object.entries(stats.fans).map(([chip, arr]) => (
+                    <div key={chip}>
+                      <p className="font-medium mb-1">{chip}</p>
+                      {arr.map((f, i) => (
+                        <div key={i} className="flex items-center gap-3 py-1">
+                          <span className="w-28 truncate">{niceLabel(f.label, i)}</span>
+                          <span>{f.current} RPM</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </>
+      )}
+
+      <Separator />
+
       {/* Battery & Network */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -136,8 +211,8 @@ export default function Dashboard() {
               <>
                 <div className="text-2xl font-bold">{stats.battery.percent}%</div>
                 <p className="text-xs text-muted-foreground">
-                  Plugged: {stats.battery.power_plugged ? "Yes" : "No"} •
-                  {` ${Math.floor(stats.battery.secsleft / 3600)}h ${Math.floor((stats.battery.secsleft % 3600) / 60)}m left`}
+                  Plugged: {stats.battery.power_plugged ? "Yes" : "No"} •{" "}
+                  {`${Math.floor(stats.battery.secsleft / 3600)}h ${Math.floor((stats.battery.secsleft % 3600) / 60)}m left`}
                 </p>
                 <Progress value={stats.battery.percent} className="mt-3" />
               </>
@@ -179,9 +254,7 @@ export default function Dashboard() {
                 tick={{ fontSize: 10 }}
               />
               <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} />
-              <Tooltip
-                labelFormatter={(t) => new Date(t).toLocaleTimeString()}
-              />
+              <Tooltip labelFormatter={(t) => new Date(t).toLocaleTimeString()} />
               <Line type="monotone" dataKey="cpu" strokeWidth={2} dot={false} name="CPU %" />
               <Line type="monotone" dataKey="ram" strokeWidth={2} dot={false} name="RAM %" />
             </LineChart>
@@ -203,20 +276,20 @@ export default function Dashboard() {
             <thead className="text-left text-muted-foreground">
               <tr>
                 <th className="py-2 pr-4">Mount</th>
-                <th className="py-2 pr-4">Used</th>
-                <th className="py-2 pr-4">Total</th>
-                <th className="py-2 pr-4">% Used</th>
+                <th className="py-2 pr-4 text-right">Used</th>
+                <th className="py-2 pr-4 text-right">Total</th>
+                <th className="py-2 pr-4 w-44 text-right">% Used</th>
               </tr>
             </thead>
             <tbody>
-              {Object.entries(stats.disk).map(([mount, d]) => (
+              {disks.map(([mount, d]) => (
                 <tr key={mount} className="border-b last:border-none">
                   <td className="py-2 pr-4">{mount}</td>
-                  <td className="py-2 pr-4">{bytesFmt(d.used)}</td>
-                  <td className="py-2 pr-4">{bytesFmt(d.total)}</td>
+                  <td className="py-2 pr-4 text-right">{bytesFmt(d.used)}</td>
+                  <td className="py-2 pr-4 text-right">{bytesFmt(d.total)}</td>
                   <td className="py-2 pr-4 w-44">
                     <div className="flex items-center gap-2">
-                      <span>{d.percent}%</span>
+                      <span className="min-w-10 text-right">{d.percent}%</span>
                       <Progress value={d.percent} className="h-2 flex-1" />
                     </div>
                   </td>
@@ -241,8 +314,8 @@ export default function Dashboard() {
                 <th className="py-2 pr-4">PID</th>
                 <th className="py-2 pr-4">Name</th>
                 <th className="py-2 pr-4">User</th>
-                <th className="py-2 pr-4">% CPU</th>
-                <th className="py-2 pr-4">% MEM</th>
+                <th className="py-2 pr-4 text-right">% CPU</th>
+                <th className="py-2 pr-4 text-right">% MEM</th>
               </tr>
             </thead>
             <tbody>
@@ -251,8 +324,8 @@ export default function Dashboard() {
                   <td className="py-2 pr-4">{p.pid}</td>
                   <td className="py-2 pr-4">{p.name}</td>
                   <td className="py-2 pr-4">{p.username}</td>
-                  <td className="py-2 pr-4">{p.cpu_percent.toFixed(1)}</td>
-                  <td className="py-2 pr-4">{p.memory_percent.toFixed(2)}</td>
+                  <td className="py-2 pr-4 text-right">{p.cpu_percent.toFixed(1)}</td>
+                  <td className="py-2 pr-4 text-right">{p.memory_percent.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
