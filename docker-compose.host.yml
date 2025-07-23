@@ -5,6 +5,11 @@ services:
     volumes:
       - /sys:/sys:ro
       - /:/host:ro
+    cap_add:
+      - SYS_ADMIN
+      - SYS_PTRACE
+      - DAC_READ_SEARCH
+      - SYS_RAWIO
     environment:
       - MONITOR_MODE=host
 
