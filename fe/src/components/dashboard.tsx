@@ -282,6 +282,39 @@ export default function Dashboard() {
 
       <Separator />
 
+      {/* Top processes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">Top Processes</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-muted-foreground">
+              <tr>
+                <th className="py-2 pr-4">PID</th>
+                <th className="py-2 pr-4">Name</th>
+                <th className="py-2 pr-4">User</th>
+                <th className="py-2 pr-4 text-right">% CPU</th>
+                <th className="py-2 pr-4 text-right">% MEM</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.top_procs.map((p) => (
+                <tr key={p.pid} className="border-b last:border-none">
+                  <td className="py-2 pr-4">{p.pid}</td>
+                  <td className="py-2 pr-4">{p.name}</td>
+                  <td className="py-2 pr-4">{p.username}</td>
+                  <td className="py-2 pr-4 text-right">{p.cpu_percent.toFixed(1)}</td>
+                  <td className="py-2 pr-4 text-right">{p.memory_percent.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
+      <Separator />
+
       {/* Disks */}
       <Card>
         <CardHeader className="flex items-center justify-between">
@@ -318,38 +351,6 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <Separator />
-
-      {/* Top processes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Top Processes</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-muted-foreground">
-              <tr>
-                <th className="py-2 pr-4">PID</th>
-                <th className="py-2 pr-4">Name</th>
-                <th className="py-2 pr-4">User</th>
-                <th className="py-2 pr-4 text-right">% CPU</th>
-                <th className="py-2 pr-4 text-right">% MEM</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.top_procs.map((p) => (
-                <tr key={p.pid} className="border-b last:border-none">
-                  <td className="py-2 pr-4">{p.pid}</td>
-                  <td className="py-2 pr-4">{p.name}</td>
-                  <td className="py-2 pr-4">{p.username}</td>
-                  <td className="py-2 pr-4 text-right">{p.cpu_percent.toFixed(1)}</td>
-                  <td className="py-2 pr-4 text-right">{p.memory_percent.toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
     </div>
   );
 }
