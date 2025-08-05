@@ -76,7 +76,7 @@ export default function Dashboard() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">System Monitor</h1>
+        <h1 className="text-2xl font-semibold">System Monitor v2</h1>
         <ThemeToggle />
       </div>
       <p className="text-sm text-muted-foreground">
