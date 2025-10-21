@@ -12,4 +12,3 @@ services:
       - SYS_RAWIO
     environment:
       - MONITOR_MODE=host
-

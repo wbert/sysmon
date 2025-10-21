@@ -1,7 +1,7 @@
 import asyncio
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from app.deps import get_settings, get_snapshot, Settings
+from app.utils.deps import get_settings, get_snapshot, Settings
 
 app = FastAPI()
 settings: Settings = get_settings()
@@ -51,4 +51,3 @@ async def ws_stats(ws: WebSocket):
     finally:
         clients.discard(ws)
         await ws.close()
-
